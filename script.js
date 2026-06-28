@@ -1,44 +1,77 @@
 const container = document.getElementById('game-container');
 const resetBtn = document.getElementById('btn-reset');
 let objects = [];
+let currentLevel = 0;
 
-// Карта объектов (x, y, тип, смайлик, гравитация по X и Y)
-// Положительный gy — падает вниз. Отрицательный gy — летит вверх!
-const levelData = [
-    { x: 150, y: 100, type: 'green', face: '🙂', gx: 0, gy: 0.3 },  
-    { x: 150, y: 220, type: 'blue',  face: '🔷', gx: 0, gy: 0 },    
-    { x: 300, y: 180, type: 'red',   face: '🙃', gx: 0, gy: -0.3 }, 
-    { x: 450, y: 50,  type: 'red',   face: '🙂', gx: 0, gy: 0.3 },  
-    { x: 300, y: 50,  type: 'bomb',  face: '💣', gx: 0, gy: 0.2 }   
+// Расширенная база уровней
+const worlds = [
+    // Уровень 1: Квадраты и интерактивные бомбы
+    [
+        { x: 150, y: 120, type: 'green', shape: 'circle', face: '🙂', gx: 0, gy: 0.3, clickable: false },
+        // Синий блок, который НЕЛЬЗЯ сломать (clickable: false)
+        { x: 150, y: 220, type: 'blue',  shape: 'square', face: '🔒', gx: 0, gy: 0,   clickable: false }, 
+        // Красный КВАДРАТ, улетающий вверх
+        { x: 300, y: 180, type: 'red',   shape: 'square', face: '😡', gx: 0, gy: -0.3, clickable: true }, 
+        // Бомба, которую можно взорвать кликом!
+        { x: 300, y: 40,  type: 'bomb',  shape: 'circle', face: '💣', gx: 0, gy: 0.2,  clickable: true }
+    ],
+    // Уровень 2: Конструкция из неломаемых блоков и кликабельных красных
+    [
+        { x: 200, y: 100, type: 'green', shape: 'circle', face: '🙂', gx: 0, gy: 0.3, clickable: false },
+        { x: 200, y: 200, type: 'blue',  shape: 'square', face: '🔷', gx: 0, gy: 0,   clickable: true },
+        // Красный зажат между неломаемыми синими, кликни по нему, чтобы он исчез/взорвался
+        { x: 350, y: 200, type: 'red',   shape: 'square', face: '🟥', gx: 0, gy: 0,   clickable: true },
+        { x: 350, y: 260, type: 'blue',  shape: 'square', face: '🔒', gx: 0, gy: 0,   clickable: false }
+    ]
 ];
 
 function initGame() {
     container.innerHTML = '';
     objects = [];
+    
+    document.getElementById('info').innerText = `Уровень ${currentLevel + 1}. Некоторые блоки кликабельны, остерегайся замков 🔒!`;
+
+    const levelData = worlds[currentLevel];
 
     levelData.forEach((data, index) => {
         const el = document.createElement('div');
-        el.className = `ball ${data.type}`;
+        // Назначаем классы: цвет (red/blue...) + форма (circle/square)
+        el.className = `ball ${data.type} ${data.shape}`;
         el.innerText = data.face;
+        
+        // Если блок нельзя кликать, убираем указатель-ручку
+        if (!data.clickable) {
+            el.style.cursor = 'default';
+        }
+        
         container.appendChild(el);
 
         const obj = {
             el: el,
             type: data.type,
+            shape: data.shape,
             x: data.x,
             y: data.y,
             vx: 0,
             vy: 0,
             gx: data.gx,
             gy: data.gy,
-            radius: 25, // половина от ширины 50px
-            isDead: false
+            size: 50, // Ширина и высота блока
+            radius: 25,
+            isDead: false,
+            clickable: data.clickable
         };
 
-        // Кликать можно только на синие блоки
-        if (obj.type === 'blue') {
-            el.addEventListener('click', () => removeObject(index));
-        }
+        // Логика клика
+        el.addEventListener('click', () => {
+            if (!obj.clickable || obj.isDead) return;
+            
+            if (obj.type === 'bomb') {
+                explodeBomb(index); // Взрыв бомбы по клику!
+            } else {
+                removeObject(index); // Обычное удаление кликом (красные, ломаемые синие)
+            }
+        });
 
         objects.push(obj);
     });
@@ -47,26 +80,9 @@ function initGame() {
 function removeObject(index) {
     if (objects[index] && !objects[index].isDead) {
         objects[index].isDead = true;
-        
-        // Если убрали синий блок, проверяем, не заставит ли это упасть бомбу на взрывное расстояние
-        if (objects[index].type === 'blue') {
-            checkBombProximity(objects[index].x, objects[index].y);
-        }
-        
         objects[index].el.remove();
+        checkVictoryCondition();
     }
-}
-
-// Проверка: если синий блок исчез под бомбой, или бомба подлетела близко к синему
-function checkBombProximity(cx, cy) {
-    objects.forEach((obj, idx) => {
-        if (!obj || obj.isDead || obj.type !== 'bomb') return;
-        
-        const dist = Math.hypot(obj.x - cx, obj.y - cy);
-        if (dist < 120) { // Если дистанция взрыва близкая
-            explodeBomb(idx);
-        }
-    });
 }
 
 function explodeBomb(bombIndex) {
@@ -77,7 +93,7 @@ function explodeBomb(bombIndex) {
     bomb.el.innerText = '💥';
     bomb.el.classList.add('exploded');
 
-    // Расталкиваем силой взрыва всех вокруг
+    // Волна взрыва расталкивает объекты
     objects.forEach((obj) => {
         if (!obj || obj.isDead || obj === bomb) return;
 
@@ -85,41 +101,58 @@ function explodeBomb(bombIndex) {
         const dy = obj.y - bomb.y;
         const dist = Math.hypot(dx, dy);
 
-        if (dist < 180) { // Радиус поражения взрывной волны
-            const force = (180 - dist) * 0.15; // Чем ближе, тем сильнее толчок
-            obj.vx += (dx / dist) * force;
-            obj.vy += (dy / dist) * force;
+        if (dist < 180) {
+            // Неломаемые синие блоки ('🔒') не сдвигаются взрывом, если у них гравитация 0
+            if (obj.type === 'blue' && obj.gx === 0 && obj.gy === 0) return;
+
+            const force = (180 - dist) * 0.2; 
+            obj.vx += (dx / (dist || 1)) * force;
+            obj.vy += (dy / (dist || 1)) * force;
         }
     });
 
-    // Окончательно удаляем бомбу после завершения CSS-анимации взрыва
     setTimeout(() => {
         bomb.el.remove();
+        checkVictoryCondition();
     }, 300);
+}
+
+function checkVictoryCondition() {
+    const redAlive = objects.some(obj => obj && !obj.isDead && obj.type === 'red');
+    if (!redAlive) {
+        setTimeout(() => {
+            if (currentLevel < worlds.length - 1) {
+                currentLevel++;
+                initGame();
+            } else {
+                alert('💥 Мега-аркада пройдена! Ты супер-инженер! 🏁');
+                currentLevel = 0;
+                initGame();
+            }
+        }, 500);
+    }
 }
 
 function updatePhysics() {
     objects.forEach((obj, i) => {
         if (!obj || obj.isDead) return;
 
-        // Накапливаем скорость от персональной гравитации
+        // Физика движения
         obj.vx += obj.gx;
         obj.vy += obj.gy;
-
-        // Меняем координаты
         obj.x += obj.vx;
         obj.y += obj.vy;
 
-        // Зеленые не должны падать за нижний край поля (для них там невидимый пол)
+        // Невидимый пол для зеленых
         if (obj.type === 'green') {
             if (obj.y > 346) { 
                 obj.y = 346;
                 obj.vy = 0;
-                obj.vx *= 0.8; // Трение при контакте с полом
+                obj.vx *= 0.7; // Сопротивление пола
             }
         }
 
-        // Логика столкновений шаров между собой
+        // Столкновения
         objects.forEach((other, j) => {
             if (!other || other.isDead || i === j) return;
 
@@ -133,56 +166,41 @@ function updatePhysics() {
                 const nx = dx / dist;
                 const ny = dy / dist;
 
-                // Раздвигаем шары, чтобы не проваливались друг в друга
-                if (obj.type !== 'blue') {
+                // Статичные синие блоки не двигаются от ударов
+                const isObjStatic = (obj.type === 'blue' && obj.gx === 0 && obj.gy === 0);
+                
+                if (!isObjStatic) {
                     obj.x -= nx * overlap * 0.5;
                     obj.y -= ny * overlap * 0.5;
-                }
-
-                // Рассчитываем отскок (импульс)
-                const kx = obj.vx - other.vx;
-                const ky = obj.vy - other.vy;
-                const p = 2 * (nx * kx + ny * ky) / 2;
-                
-                if (obj.type !== 'blue') {
+                    
+                    const kx = obj.vx - other.vx;
+                    const ky = obj.vy - other.vy;
+                    const p = 2 * (nx * kx + ny * ky) / 2;
+                    
                     obj.vx -= p * nx;
                     obj.vy -= p * ny;
                 }
             }
         });
 
-        // Отрисовка на экране через стили
+        // Отрезаем координаты под экран
         obj.el.style.left = obj.x + 'px';
         obj.el.style.top = obj.y + 'px';
 
-        // Проверка вылета за границы (условия победы/проигрыша)
+        // Вылет за границы игрового поля
         if (obj.y < -60 || obj.y > 420 || obj.x < -60 || obj.x > 620) {
             if (obj.type === 'red') {
-                removeObject(i); // Красный успешно улетел
+                removeObject(i); 
             } else if (obj.type === 'green') {
-                alert('Упс! Зеленый смайлик улетел. Попробуй еще раз!');
+                alert('Критическая ошибка! Зеленый объект потерян.');
                 initGame();
             }
-        }
-    });
-
-    // Каждым кадром проверяем, если ли поблизости летящая бомба к опорам
-    objects.forEach((obj, idx) => {
-        if (obj && obj.type === 'bomb' && !obj.isDead) {
-            objects.forEach(blueObj => {
-                if (blueObj && blueObj.type === 'blue' && !blueObj.isDead) {
-                    checkBombProximity(blueObj.x, blueObj.y);
-                }
-            });
         }
     });
 
     requestAnimationFrame(updatePhysics);
 }
 
-// Вешаем событие на кнопку рестарта
 resetBtn.addEventListener('click', initGame);
-
-// Запуск игры
 initGame();
 updatePhysics();
