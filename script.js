@@ -1,137 +1,204 @@
-// Настройки игры
-let players = [];
-let targetTime = 0;
-let holdStartTime = 0;
-let currentPlayerIndex = 0;
-let isGameActive = false;
-
-// 1. СТАРТ ИГРЫ (Локальное создание лобби)
-function startTimeGame(isHost) {
-    const nameInput = document.getElementById('name-input').value.trim();
-    const roomInput = document.getElementById('room-input').value.trim(); // Используем как имя группы/сессии
-
-    if (!nameInput) return alert("Введите ваше имя!");
-
-    // Инициализируем локальную сессию
-    const sessionKey = `time_battle_${roomInput || 'local'}`;
-    const savedData = localStorage.getItem(sessionKey);
-    
-    if (savedData) {
-        players = JSON.parse(savedData);
-    } else {
-        players = [];
-    }
-
-    // Если игрока с таким именем нет — добавляем
-    if (!players.some(p => p.name === nameInput)) {
-        players.push({ name: nameInput, score: 0, lastResult: null, done: false });
-    }
-
-    localStorage.setItem(sessionKey, JSON.stringify(players));
-    
-    // Переход на игровой экран
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('game-screen').classList.remove('hidden');
-    document.getElementById('room-id').innerText = roomInput || "Локальная";
-    
-    // Генерируем цель для первого раунда
-    generateNewTarget();
-    updateLeaderboard();
+// --- ОБЩАЯ СИСТЕМА ПЕРЕКЛЮЧЕНИЯ ЭКРАНОВ ---
+function switchScreen(screenId) {
+    document.querySelectorAll('.screen-view').forEach(s => s.classList.add('hidden'));
+    document.getElementById(screenId).classList.remove('hidden');
 }
 
-// 2. ГЕНЕРАЦИЯ СЛУЧАЙНОЙ ЦЕЛИ ВРЕМЕНИ
-function generateNewTarget() {
-    // Случайное время от 1.50 до 5.00 секунд
-    targetTime = (Math.random() * (5.0 - 1.5) + 1.5).toFixed(2);
-    document.getElementById('target-time').innerText = targetTime;
-    document.getElementById('game-status').innerText = "Передайте телефон игроку!";
-    isGameActive = true;
+function backToAuth(authScreenId) {
+    switchScreen(authScreenId);
 }
 
-// 3. МЕХАНИКА НАЖАТИЯ И УДЕРЖАНИЯ КНОПКИ
-function startHolding(event) {
-    if (!isGameActive) return;
-    if (event) event.preventDefault(); // Защита от двойного тапа на мобилках
+// ========================================================
+// ИГРА №3: ТАЙМ-БАТТЛ
+// ========================================================
+let timePlayers = [];
+let timeTarget = 0;
+let holdStart = 0;
+let isTimeActive = false;
+
+function startTimeGame() {
+    const room = document.getElementById('time-room-input').value.trim() || 'local';
+    const name = document.getElementById('time-name-input').value.trim();
+    if (!name) return alert("Введите имя!");
+
+    const key = `arcade_time_${room}`;
+    timePlayers = JSON.parse(localStorage.getItem(key)) || [];
+    if (!timePlayers.some(p => p.name === name)) {
+        timePlayers.push({ name: name, score: 0, last: null, done: false });
+    }
+    localStorage.setItem(key, JSON.stringify(timePlayers));
+
+    switchScreen('game-time');
+    document.getElementById('time-room-id').innerText = room;
     
-    holdStartTime = performance.now();
-    document.getElementById('game-status').innerText = "Внутренние часы пошли... ⏱️";
+    if (!isTimeActive && timePlayers.every(p => !p.done)) generateTimeTarget();
+    updateTimeLeaderboard();
 }
 
-function stopHolding(event) {
-    if (!isGameActive || holdStartTime === 0) return;
-    if (event) event.preventDefault();
+function generateTimeTarget() {
+    timeTarget = (Math.random() * (4.5 - 1.5) + 1.5).toFixed(2);
+    document.getElementById('target-time').innerText = timeTarget;
+    document.getElementById('time-status').innerText = "Зажимай кнопку!";
+    isTimeActive = true;
+}
 
-    const holdEndTime = performance.now();
-    const durationSeconds = ((holdEndTime - holdStartTime) / 1000).toFixed(3);
-    holdStartTime = 0; // Сброс
+function startHolding(e) { if(isTimeActive) { if(e) e.preventDefault(); holdStart = performance.now(); document.getElementById('time-status').innerText = "Часы тикают... ⏱️"; } }
+function stopHolding(e) {
+    if(!isTimeActive || holdStart === 0) return;
+    if(e) e.preventDefault();
+    const duration = ((performance.now() - holdStart) / 1000).toFixed(3);
+    holdStart = 0;
 
-    // Считаем разницу с целью
-    const difference = Math.abs(durationSeconds - targetTime).toFixed(3);
-    
-    // Формула очков: максимум 1000, за каждую тысячную долю секунды ошибки теряется 1 очко
-    const pointsEarned = Math.max(0, Math.round(1000 - difference * 1000));
+    const diff = Math.abs(duration - timeTarget).toFixed(3);
+    const pts = Math.max(0, Math.round(1000 - diff * 1000));
 
-    // Находим текущего активного игрока, который еще не ходил в этом раунде
-    let activePlayer = players.find(p => !p.done);
-    
-    if (activePlayer) {
-        activePlayer.lastResult = { duration: durationSeconds, diff: difference, points: pointsEarned };
-        activePlayer.score += pointsEarned;
-        activePlayer.done = true;
-        
-        alert(`Результат ${activePlayer.name}:\nДержал: ${durationSeconds} сек\nЦель: ${targetTime} сек\nОчки: +${pointsEarned}`);
+    const room = document.getElementById('time-room-input').value.trim() || 'local';
+    let p = timePlayers.find(p => !p.done);
+    if (p) {
+        p.last = duration; p.score += pts; p.done = true;
+        alert(`${p.name}: ${duration}с (Цель: ${timeTarget}с) -> +${pts} очков!`);
     }
 
-    // Проверяем, сходили ли все
-    const allDone = players.every(p => p.done);
-    if (allDone) {
-        isGameActive = false;
-        document.getElementById('game-status').innerText = "Раунд завершен!";
-        document.getElementById('host-next-btn').classList.remove('hidden'); // Показываем кнопку нового раунда
-    } else {
-        document.getElementById('game-status').innerText = "Передайте телефон следующему!";
+    if (timePlayers.every(p => p.done)) {
+        isTimeActive = false;
+        document.getElementById('time-status').innerText = "Раунд окончен!";
+        document.getElementById('time-next-btn').classList.remove('hidden');
     }
-
-    // Сохраняем прогресс в localStorage
-    const roomInput = document.getElementById('room-input').value.trim();
-    localStorage.setItem(`time_battle_${roomInput || 'local'}`, JSON.stringify(players));
-
-    updateLeaderboard();
+    localStorage.setItem(`arcade_time_${room}`, JSON.stringify(timePlayers));
+    updateTimeLeaderboard();
 }
 
-// 4. ОБНОВЛЕНИЕ ТАБЛИЦЫ ЛИДЕРОВ
-function updateLeaderboard() {
-    const container = document.getElementById('leaderboard');
-    container.innerHTML = '';
-
-    // Сортируем игроков по общему количеству очков (от большего к меньшему)
-    const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
-
-    sortedPlayers.forEach(p => {
-        const row = document.createElement('div');
-        row.className = `player-row ${p.done ? 'done' : ''}`;
-        
-        let resultText = p.done && p.lastResult ? `| Последний: ${p.lastResult.duration}с` : '🤔 Думает';
-        
-        row.innerHTML = `
-            <div class="player-info">
-                <div class="status-dot"></div>
-                <span><b>${p.name}</b> ${resultText}</span>
-            </div>
-            <div class="score-badge">${p.score} 🏆</div>
-        `;
-        container.appendChild(row);
+function updateTimeLeaderboard() {
+    const box = document.getElementById('time-leaderboard'); box.innerHTML = '';
+    [...timePlayers].sort((a,b)=>b.score-a.score).forEach(p => {
+        box.innerHTML += `<div class="player-row ${p.done?'done':''}"><div class="player-info"><div class="status-dot"></div><span><b>${p.name}</b> ${p.done?'| '+p.last+'с':'| 🤔'}</span></div><div class="score-badge">${p.score} 🏆</div></div>`;
     });
 }
 
-// 5. СЛЕДУЮЩИЙ РАУНД
 function nextTimeRound() {
-    // Сбрасываем флаги готовности для нового раунда
-    players.forEach(p => {
-        p.done = false;
+    timePlayers.forEach(p => p.done = false);
+    document.getElementById('time-next-btn').classList.add('hidden');
+    generateTimeTarget(); updateTimeLeaderboard();
+}
+
+
+// ========================================================
+// ИГРА №1: КАДР ЗА КАДРОМ
+// ========================================================
+const frameDatabase = [
+    { img: "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600", right: "Наруто", variants: ["Ван Пис", "Наруто", "Атака Титанов", "Клинок рассекающий демонов"] },
+    { img: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600", right: "Гарри Поттер", variants: ["Властелин Колец", "Гарри Поттер", "Хроники Нарнии", "Звёздные Войны"] },
+    { img: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600", right: "Аватар", variants: ["Интерстеллар", "Мстители", "Аватар", "Трансформеры"] },
+    { img: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=600", right: "Твоё имя", variants: ["Унесённые призраками", "Твоё имя", "Форма голоса", "Дитя погоды"] }
+];
+
+let framePlayers = [];
+let currentFrameRound = 0;
+let frameTimeLeft = 20;
+let frameTimerInterval = null;
+let currentBlur = 25;
+
+function startFrameGame() {
+    const room = document.getElementById('frame-room-input').value.trim() || 'local';
+    const name = document.getElementById('frame-name-input').value.trim();
+    if (!name) return alert("Введите имя!");
+
+    const key = `arcade_frame_${room}`;
+    framePlayers = JSON.parse(localStorage.getItem(key)) || [];
+    if (!framePlayers.some(p => p.name === name)) {
+        framePlayers.push({ name: name, score: 0, done: false });
+    }
+    localStorage.setItem(key, JSON.stringify(framePlayers));
+
+    switchScreen('game-frame');
+    if (framePlayers.every(p => !p.done)) loadFrameRound();
+    updateFrameLeaderboard();
+}
+
+function loadFrameRound() {
+    clearInterval(frameTimerInterval);
+    const roundData = frameDatabase[currentFrameRound % frameDatabase.length];
+    
+    document.getElementById('cinema-shot').src = roundData.img;
+    document.getElementById('frame-round-num').innerText = `${(currentFrameRound % frameDatabase.length) + 1}/${frameDatabase.length}`;
+    
+    // Сброс размытия и времени
+    frameTimeLeft = 20;
+    currentBlur = 25;
+    const blurLayer = document.getElementById('blur-layer');
+    blurLayer.style.backdropFilter = `blur(${currentBlur}px)`;
+    blurLayer.style.webkitBackdropFilter = `blur(${currentBlur}px)`;
+
+    // Рендер кнопок вариантов
+    const container = document.getElementById('variants-container');
+    container.innerHTML = '';
+    roundData.variants.forEach(variant => {
+        container.innerHTML += `<button class="btn-variant" onclick="checkFrameAnswer(this, '${variant}')">${variant}</button>`;
     });
 
-    document.getElementById('host-next-btn').classList.add('hidden');
-    generateNewTarget();
-    updateLeaderboard();
+    // Запуск таймера фокусировки кадра
+    frameTimerInterval = setInterval(() => {
+        frameTimeLeft--;
+        document.getElementById('frame-timer').innerText = `Таймер: ${frameTimeLeft}с`;
+        
+        // Каждые 4 секунды картинка становится чётче!
+        if (frameTimeLeft % 4 === 0 && currentBlur > 0) {
+            currentBlur -= 5;
+            blurLayer.style.backdropFilter = `blur(${currentBlur}px)`;
+            blurLayer.style.webkitBackdropFilter = `blur(${currentBlur}px)`;
+        }
+
+        if (frameTimeLeft <= 0) {
+            clearInterval(frameTimerInterval);
+            revealFrameResult();
+        }
+    }, 1000);
+}
+
+function checkFrameAnswer(btn, answer) {
+    clearInterval(frameTimerInterval);
+    const roundData = frameDatabase[currentFrameRound % frameDatabase.length];
+    const room = document.getElementById('frame-room-input').value.trim() || 'local';
+    
+    let p = framePlayers.find(p => !p.done);
+    let pts = 0;
+
+    if (answer === roundData.right) {
+        btn.classList.add('correct');
+        // Чем быстрее ответил (больше blur) — тем больше очков!
+        pts = frameTimeLeft * 10;
+        if (p) p.score += pts;
+        alert(`Правильно! +${pts} очков.`);
+    } else {
+        btn.classList.add('wrong');
+        alert(`Неверно! Правильный ответ: ${roundData.right}`);
+    }
+
+    if (p) p.done = true;
+    localStorage.setItem(`arcade_frame_${room}`, JSON.stringify(framePlayers));
+    revealFrameResult();
+}
+
+function revealFrameResult() {
+    // Полностью убираем размытие в конце раунда
+    document.getElementById('blur-layer').style.backdropFilter = 'blur(0px)';
+    document.getElementById('blur-layer').style.webkitBackdropFilter = 'blur(0px)';
+    
+    document.getElementById('frame-next-btn').classList.remove('hidden');
+    updateFrameLeaderboard();
+}
+
+function updateFrameLeaderboard() {
+    const box = document.getElementById('frame-leaderboard'); box.innerHTML = '';
+    [...framePlayers].sort((a,b)=>b.score-a.score).forEach(p => {
+        box.innerHTML += `<div class="player-row ${p.done?'done':''}"><div class="player-info"><div class="status-dot"></div><span><b>${p.name}</b></span></div><div class="score-badge">${p.score} 🏆</div></div>`;
+    });
+}
+
+function nextFrameRound() {
+    currentFrameRound++;
+    framePlayers.forEach(p => p.done = false);
+    document.getElementById('frame-next-btn').classList.add('hidden');
+    loadFrameRound();
+    updateFrameLeaderboard();
 }
