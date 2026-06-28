@@ -3,135 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ArcadeBox — Игры для компании</title>
-    <!-- Подключаем официальный клиент Supabase -->
+    <title>BFF Test — Проверь своего друга</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 
     <div class="app-container">
         
-        <!-- ================= ЭКРАН 1: ГЛАВНОЕ МЕНЮ ================= -->
-        <div id="main-menu" class="screen-view">
+        <!-- ЭКРАН 1: СОЗДАНИЕ ТЕСТА -->
+        <div id="create-screen" class="screen-view">
             <div class="hero-zone">
-                <div class="pulse-circle">🎮</div>
-                <h1>Arcade<span>Box</span></h1>
-                <p>Выбирай игру и сражайся с друзьями на одном экране!</p>
-            </div>
-
-            <div class="menu-grid">
-                <div class="menu-card cyan-border" onclick="switchScreen('auth-time')">
-                    <span class="card-icon">⏱️</span>
-                    <div class="card-text">
-                        <h3>Тайм-Баттл</h3>
-                        <p>Поймай заданную миллисекунду точнее всех.</p>
-                    </div>
-                </div>
-
-                <div class="menu-card pink-border" onclick="switchScreen('auth-frame')">
-                    <span class="card-icon">🎭</span>
-                    <div class="card-text">
-                        <h3>Загадай & Угадай</h3>
-                        <p>Один тайно выбирает фильм из 4, остальные угадывают!</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ================= ЭКРАН 2: АВТОРИЗАЦИЯ ТАЙМ-БАТТЛ ================= -->
-        <div id="auth-time" class="screen-view hidden">
-            <button class="btn-back" onclick="switchScreen('main-menu')">← Меню</button>
-            <div class="hero-zone">
-                <h2>Тайм-<span>Баттл</span></h2>
-                <p>Вход в группу</p>
-            </div>
-            <div class="login-form">
-                <input type="text" id="time-room-input" placeholder="Код группы (например: 777)">
-                <input type="text" id="time-name-input" placeholder="Твоё имя">
-                <button class="neon-btn purple" onclick="startTimeGame()">Войти в группу 🎮</button>
-            </div>
-        </div>
-
-        <!-- ================= ЭКРАН 3: ИГРА ТАЙМ-БАТТЛ ================= -->
-        <div id="game-time" class="screen-view hidden">
-            <div class="top-nav">
-                <span class="badge">Группа: <b id="time-room-id">---</b></span>
-                <span id="time-status" class="status-indicator">Зажимай кнопку!</span>
-            </div>
-            <div class="target-display">
-                <p>Цель раунда:</p>
-                <div id="target-time">0.00</div>
-                <span>секунд</span>
-            </div>
-            <div class="pad-area">
-                <button id="action-pad" 
-                        onmousedown="startHolding()" 
-                        onmouseup="stopHolding()" 
-                        ontouchstart="startHolding(event)" 
-                        ontouchend="stopHolding(event)">
-                    ЗАЖМИ И ДЕРЖИ
-                </button>
-            </div>
-            <div class="results-layout">
-                <h3>Участники группы:</h3>
-                <div id="time-leaderboard" class="players-list"></div>
-            </div>
-            <div class="button-row" style="margin-top: 15px;">
-                <button class="neon-btn" onclick="backToAuth('auth-time')">➕ Сменить игрока</button>
-                <button id="time-next-btn" class="neon-btn yellow hidden" onclick="nextTimeRound()">Новый раунд 🚀</button>
-            </div>
-        </div>
-
-        <!-- ================= ЭКРАН 4: АВТОРИЗАЦИЯ ЗАГАДАЙ & УГАДАЙ ================= -->
-        <div id="auth-frame" class="screen-view hidden">
-            <button class="btn-back" onclick="switchScreen('main-menu')">← Меню</button>
-            <div class="hero-zone">
-                <h2>Загадай & <span>Угадай</span></h2>
-                <p>Вход в группу киноманов</p>
-            </div>
-            <div class="login-form">
-                <input type="text" id="frame-room-input" placeholder="Код группы (например: 999)">
-                <input type="text" id="frame-name-input" placeholder="Твоё имя">
-                <button class="neon-btn pink" onclick="startFrameGame()">Войти в группу 🎬</button>
-            </div>
-        </div>
-
-        <!-- ================= ЭКРАН 5: ИГРА (ХОД ВЕДУЩЕГО И УГАДЫВАЮЩИХ) ================= -->
-        <div id="game-frame" class="screen-view hidden">
-            <div class="top-nav">
-                <span class="badge">Группа: <b id="frame-room-id">---</b></span>
-                <span id="frame-role-status" class="status-indicator" style="color: var(--neon-pink)">Выбор ведущего</span>
+                <div class="pulse-circle">🧠</div>
+                <h1>BFF<span>Test</span></h1>
+                <p>Создай тест о себе и проверь, насколько хорошо тебя знают друзья!</p>
             </div>
             
-            <!-- Инструкция для тех, кто передает телефон -->
-            <div class="target-display" id="frame-instruction-box">
-                <p id="frame-instruction-title">ВЕДУЩИЙ: <span id="current-host-name">---</span></p>
-                <div id="frame-main-instruction" style="font-size: 18px; font-weight: bold; margin-top: 10px;">
-                    Возьми телефон и тайно выбери один фильм!
+            <div id="creator-auth">
+                <div class="login-form">
+                    <input type="text" id="creator-name-input" placeholder="Твоё имя">
+                    <button class="neon-btn purple" onclick="startCreatingTest()">Создать тест 🚀</button>
                 </div>
             </div>
 
-            <!-- Зона выбора/угадывания -->
-            <div class="quiz-zone">
-                <p class="instruction" id="variants-title">Доступные варианты:</p>
-                <div class="variants-grid" id="variants-container">
-                    <!-- Кнопки генерируются динамически -->
+            <div id="quiz-builder" class="hidden">
+                <div class="top-nav">
+                    <span class="badge" id="question-number">Вопрос 1/5</span>
+                </div>
+                <div class="target-display">
+                    <div id="builder-question-text" style="font-size: 18px; font-weight: bold;">Тут вопрос?</div>
+                </div>
+                <div class="variants-grid" id="builder-variants">
+                    <!-- Варианты сгенерирует JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ЭКРАН 2: ССЫЛКА ГОТОВА -->
+        <div id="share-screen" class="screen-view hidden">
+            <div class="hero-zone">
+                <div class="pulse-circle">🔗</div>
+                <h2>Тест <span>готов!</span></h2>
+                <p>Скопируй ссылку ниже и отправь её друзьям в Telegram или WhatsApp:</p>
+            </div>
+            <div class="login-form">
+                <input type="text" id="share-link-input" readonly onclick="this.select()">
+                <button class="neon-btn purple" onclick="copyLink()">Скопировать ссылку 📋</button>
+            </div>
+            <div class="results-layout" style="margin-top: 30px;">
+                <h3>Кто уже прошёл:</h3>
+                <div id="share-leaderboard" class="players-list"></div>
+            </div>
+        </div>
+
+        <!-- ЭКРАН 3: ДРУГ ПРОХОДИТ ТЕСТ -->
+        <div id="friend-screen" class="screen-view hidden">
+            <div class="hero-zone">
+                <div class="pulse-circle">👀</div>
+                <h2>Угадай <span>секреты</span></h2>
+                <p>Ты проходишь тест, который создал: <b id="display-creator-name" style="color:var(--neon-cyan)">---</b></p>
+            </div>
+
+            <div id="friend-auth">
+                <div class="login-form">
+                    <input type="text" id="friend-name-input" placeholder="Твоё имя">
+                    <button class="neon-btn pink" onclick="startFriendQuiz()">Начать угадывать 🎮</button>
                 </div>
             </div>
 
-            <!-- Кнопка перехода к угадыванию (показывается ведущему после выбора) -->
-            <button id="frame-submit-choice-btn" class="neon-btn purple hidden" onclick="startGuessingPhase()">Я выбрал, передаю телефон! 📱</button>
-
-            <div class="results-layout" style="margin-top: 15px;">
-                <h3>Рейтинг киноманов группы:</h3>
-                <div id="frame-leaderboard" class="players-list"></div>
+            <div id="friend-quiz" class="hidden">
+                <div class="top-nav">
+                    <span class="badge" id="friend-q-number">Вопрос 1/5</span>
+                </div>
+                <div class="target-display">
+                    <div id="friend-question-text" style="font-size: 18px; font-weight: bold;">Вопрос?</div>
+                </div>
+                <div class="variants-grid" id="friend-variants">
+                    <!-- Варианты -->
+                </div>
             </div>
+        </div>
 
-            <div class="button-row" style="margin-top: 15px;">
-                <button class="neon-btn" onclick="backToAuth('auth-frame')">➕ Добавить игрока</button>
-                <button id="frame-next-btn" class="neon-btn yellow hidden" onclick="nextFrameRound()">Следующий ведущий 🚀</button>
+        <!-- ЭКРАН 4: ФИНАЛ ДЛЯ ДРУГА -->
+        <div id="result-screen" class="screen-view hidden">
+            <div class="hero-zone">
+                <div class="pulse-circle">🎉</div>
+                <h2 id="result-title">Результат</h2>
+                <p id="result-percent-text" style="font-size: 22px; font-weight: 800; color: var(--neon-yellow); margin: 20px 0;"></p>
             </div>
+            <button class="neon-btn purple" onclick="window.location.href = window.location.pathname">Создать свой тест 🧠</button>
         </div>
 
     </div>
