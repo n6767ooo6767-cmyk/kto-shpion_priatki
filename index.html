@@ -3,43 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TimeBattle — Поймай миллисекунду</title>
+    <title>ArcadeBox — Игры для компании</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div class="app-container">
-        <!-- ЭКРАН 1: ВХОД -->
-        <div id="auth-screen" class="screen-view">
+        
+        <!-- ================= ЭКРАН 1: ГЛАВНОЕ МЕНЮ ================= -->
+        <div id="main-menu" class="screen-view">
             <div class="hero-zone">
-                <div class="pulse-circle">⏱️</div>
-                <h1>Time<span>Battle</span></h1>
-                <p>Почувствуй время. Битва на миллисекунды с друзьями на одном экране!</p>
+                <div class="pulse-circle">🎮</div>
+                <h1>Arcade<span>Box</span></h1>
+                <p>Выбирай игру и сражайся с друзьями на одном экране!</p>
             </div>
 
-            <div class="login-form">
-                <input type="text" id="room-input" placeholder="Название вашей компании (например: Бро)">
-                <input type="text" id="name-input" placeholder="Твоё имя">
-                <div class="button-row">
-                    <button class="neon-btn purple" style="width: 100%; flex: none;" onclick="startTimeGame(true)">Начать баттл 🎮</button>
+            <div class="menu-grid">
+                <!-- Карточка Игры №3 -->
+                <div class="menu-card cyan-border" onclick="switchScreen('auth-time')">
+                    <span class="card-icon">⏱️</span>
+                    <div class="card-text">
+                        <h3>Тайм-Баттл</h3>
+                        <p>Поймай заданную миллисекунду точнее всех.</p>
+                    </div>
+                </div>
+
+                <!-- Карточка Игры №1 -->
+                <div class="menu-card pink-border" onclick="switchScreen('auth-frame')">
+                    <span class="card-icon">🎬</span>
+                    <div class="card-text">
+                        <h3>Кадр за кадром</h3>
+                        <p>Угадай фильм или аниме по размытому кадру.</p>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- ЭКРАН 2: ИГРА -->
-        <div id="game-screen" class="screen-view hidden">
-            <div class="top-nav">
-                <span class="badge">Группа: <b id="room-id">---</b></span>
-                <span id="game-status" class="status-indicator">Ожидание нажатия...</span>
+        <!-- ================= ЭКРАН 2: АВТОРИЗАЦИЯ ТАЙМ-БАТТЛ ================= -->
+        <div id="auth-time" class="screen-view hidden">
+            <button class="btn-back" onclick="switchScreen('main-menu')">← Меню</button>
+            <div class="hero-zone">
+                <h2>Тайм-<span>Баттл</span></h2>
+                <p>Настройка локальной сессии</p>
             </div>
+            <div class="login-form">
+                <input type="text" id="time-room-input" placeholder="Название компании (например: Бро)">
+                <input type="text" id="time-name-input" placeholder="Твоё имя">
+                <button class="neon-btn purple" onclick="startTimeGame()">Начать баттл 🎮</button>
+            </div>
+        </div>
 
+        <!-- ================= ЭКРАН 3: ИГРА ТАЙМ-БАТТЛ ================= -->
+        <div id="game-time" class="screen-view hidden">
+            <div class="top-nav">
+                <span class="badge">Группа: <b id="time-room-id">---</b></span>
+                <span id="time-status" class="status-indicator">Ожидание...</span>
+            </div>
             <div class="target-display">
                 <p>Цель раунда:</p>
                 <div id="target-time">0.00</div>
                 <span>секунд</span>
             </div>
-
-            <!-- Главная неоновая кнопка удержания -->
             <div class="pad-area">
                 <button id="action-pad" 
                         onmousedown="startHolding()" 
@@ -49,21 +73,61 @@
                     ЗАЖМИ И ДЕРЖИ
                 </button>
             </div>
-
-            <!-- Список участников и результаты -->
             <div class="results-layout">
-                <h3>Участники баттла:</h3>
-                <div id="leaderboard" class="players-list">
-                    <!-- Сюда JS будет рендерить карточки игроков -->
+                <h3>Участники:</h3>
+                <div id="time-leaderboard" class="players-list"></div>
+            </div>
+            <div class="button-row" style="margin-top: 15px;">
+                <button class="neon-btn" onclick="backToAuth('auth-time')">➕ Игрок</button>
+                <button id="time-next-btn" class="neon-btn yellow hidden" onclick="nextTimeRound()">Раунд 🚀</button>
+            </div>
+        </div>
+
+        <!-- ================= ЭКРАН 4: АВТОРИЗАЦИЯ КАДР ЗА КАДРОМ ================= -->
+        <div id="auth-frame" class="screen-view hidden">
+            <button class="btn-back" onclick="switchScreen('main-menu')">← Меню</button>
+            <div class="hero-zone">
+                <h2>Кадр за <span>кадром</span></h2>
+                <p>Угадай аниме или фильм по деталям</p>
+            </div>
+            <div class="login-form">
+                <input type="text" id="frame-room-input" placeholder="Название компании">
+                <input type="text" id="frame-name-input" placeholder="Твоё имя">
+                <button class="neon-btn pink" onclick="startFrameGame()">Смотреть кадр 🎬</button>
+            </div>
+        </div>
+
+        <!-- ================= ЭКРАН 5: ИГРА КАДР ЗА КАДРОМ ================= -->
+        <div id="game-frame" class="screen-view hidden">
+            <div class="top-nav">
+                <span class="badge">Раунд: <b id="frame-round-num">1/5</b></span>
+                <span id="frame-timer" class="status-indicator" style="color: var(--neon-pink)">Таймер: 20с</span>
+            </div>
+            
+            <!-- Кинематографичный блок с размытием -->
+            <div class="frame-viewer">
+                <img id="cinema-shot" src="" alt="Кадр">
+                <div class="blur-cover" id="blur-layer"></div>
+            </div>
+
+            <div class="quiz-zone">
+                <p class="instruction">Что это за фильм / аниме?</p>
+                <div class="variants-grid" id="variants-container">
+                    <!-- Сюда JS вставит 4 кнопки вариантов ответа -->
                 </div>
             </div>
 
-            <!-- Кнопка добавления нового игрока (в этой же сессии) -->
-            <div class="button-row" style="margin-top: 10px;">
-                <button class="neon-btn" onclick="location.reload();">➕ Добавить игрока</button>
-                <button id="host-next-btn" class="neon-btn yellow hidden" onclick="nextTimeRound()">Новый раунд 🚀</button>
+            <div class="results-layout" style="margin-top: 15px;">
+                <h3>Счёт киноманов:</h3>
+                <div id="frame-leaderboard" class="players-list"></div>
+            </div>
+
+            <div class="button-row" style="margin-top: 15px;">
+                <button class="neon-btn" onclick="backToAuth('auth-frame')">➕ Игрок</button>
+                <button id="frame-next-btn" class="neon-btn yellow hidden" onclick="nextFrameRound()">Далее 🚀</button>
             </div>
         </div>
+
     </div>
 
     <script src="script.js"></script>
