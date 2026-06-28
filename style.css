@@ -1,103 +1,144 @@
 body {
     margin: 0;
-    background: #1a1a1a;
+    background: #1e1b4b;
     color: white;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Segoe UI', system-ui, sans-serif;
     display: flex;
-    flex-direction: column;
-    align-items: center;
     justify-content: center;
-    height: 100vh;
-    overflow: hidden;
-}
-
-h1 {
-    margin-bottom: 5px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-}
-
-#info {
-    margin-bottom: 20px;
-    color: #888;
-    font-size: 14px;
-}
-
-/* Игровое поле */
-#game-container {
-    position: relative;
-    width: 600px;
-    height: 400px;
-    background: #262626;
-    border: 4px solid #444;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    overflow: hidden;
-}
-
-/* Общий стиль для всех игровых объектов */
-.ball {
-    position: absolute;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    display: flex;
     align-items: center;
-    justify-content: center;
-    font-size: 32px;
-    user-select: none;
+    min-height: 100vh;
+}
+
+/* Экраны */
+.screen {
+    width: 90%;
+    max-width: 500px;
+    background: #2e1065;
+    border-radius: 24px;
+    padding: 30px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    text-align: center;
     box-sizing: border-box;
 }
 
-/* Стили для разных типов */
-.red { 
-    background: #ff4757; 
-    box-shadow: 0 0 15px rgba(255, 73, 87, 0.6); 
-}
+.hidden { display: none !important; }
 
-.green { 
-    background: #2ed573; 
-    box-shadow: 0 0 15px rgba(46, 213, 115, 0.6); 
-}
-
-.blue { 
-    background: #1e90ff; 
-    box-shadow: 0 0 15px rgba(30, 144, 255, 0.6); 
-    cursor: pointer;
-    transition: transform 0.1s;
-}
-.blue:hover {
-    transform: scale(1.1);
-}
-
-.bomb { 
-    background: #333; 
-    border: 3px dashed #ff9f43; 
-    box-shadow: 0 0 15px rgba(255, 159, 67, 0.4); 
-}
-
-/* Анимация для эффекта взрыва */
-.exploded {
-    animation: blowUp 0.3s forwards;
-}
-
-@keyframes blowUp {
-    0% { transform: scale(1); opacity: 1; }
-    100% { transform: scale(2.5); opacity: 0; }
-}
-
-/* Кнопка сброса */
-#btn-reset {
-    margin-top: 20px;
-    padding: 12px 24px;
-    font-size: 16px;
-    font-weight: bold;
-    background: #ff4757;
+/* Кастомные кнопки */
+.btn-main {
+    background: #f43f5e;
     color: white;
     border: none;
-    border-radius: 6px;
+    padding: 12px 28px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 12px;
     cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
+    margin-top: 15px;
+    box-shadow: 0 4px 0 #be123c;
+    transition: transform 0.1s;
 }
-#btn-reset:hover { background: #ff6b81; }
-#btn-reset:active { transform: scale(0.95); }
+.btn-main:active { transform: translateY(4px); box-shadow: none; }
+
+.btn-back {
+    float: left;
+    background: none;
+    border: 1px solid #a78bfa;
+    color: #a78bfa;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* Меню WePlay */
+.logo { font-size: 32px; margin-bottom: 5px; }
+.logo span { color: #f43f5e; }
+.subtitle { color: #c084fc; margin-bottom: 30px; }
+
+.menu-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.menu-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    border-radius: 18px;
+    cursor: pointer;
+    text-align: left;
+    transition: transform 0.2s;
+}
+.menu-card:hover { transform: scale(1.03); }
+.spy-card { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+.hide-card { background: linear-gradient(135deg, #10b981, #047857); }
+.menu-card .icon { font-size: 40px; }
+.menu-card h3 { margin: 0 0 5px 0; }
+.menu-card p { margin: 0; color: #e0e7ff; font-size: 13px; }
+
+/* Стили: Кто Шпион (3D Карточка) */
+input[type="number"] {
+    padding: 8px;
+    width: 60px;
+    border-radius: 8px;
+    border: none;
+    font-size: 16px;
+    text-align: center;
+}
+.card-container {
+    width: 200px;
+    height: 280px;
+    perspective: 1000px;
+    margin: 20px auto;
+}
+.card {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.6s;
+    cursor: pointer;
+}
+.card.flipped { transform: rotateY(180deg); }
+.card-front, .card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: bold;
+    padding: 15px;
+    box-sizing: border-box;
+}
+.card-front { background: #4f46e5; border: 3px solid #818cf8; }
+.card-back { background: #10b981; transform: rotateY(180deg); color: white; }
+
+/* Стили: Прятки */
+.game-bar {
+    display: flex;
+    justify-content: space-between;
+    margin: 15px 0;
+    color: #c084fc;
+    font-weight: bold;
+}
+#hide-field {
+    width: 100%;
+    height: 300px;
+    background: #4c1d95;
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+    border: 2px solid #6d28d9;
+}
+.hidden-emoji {
+    position: absolute;
+    font-size: 24px;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.2s;
+}
+.hidden-emoji:hover { transform: scale(1.3); }
