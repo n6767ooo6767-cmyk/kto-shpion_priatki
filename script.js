@@ -1,206 +1,164 @@
-const container = document.getElementById('game-container');
-const resetBtn = document.getElementById('btn-reset');
-let objects = [];
-let currentLevel = 0;
+// НАВИГАЦИЯ МЕЖДУ ЭКРАНАМИ
+function switchScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+    document.getElementById(screenId).classList.remove('hidden');
+    // Сброс таймеров пряток при выходе
+    clearInterval(hideTimerInterval);
+}
 
-// Расширенная база уровней
-const worlds = [
-    // Уровень 1: Квадраты и интерактивные бомбы
-    [
-        { x: 150, y: 120, type: 'green', shape: 'circle', face: '🙂', gx: 0, gy: 0.3, clickable: false },
-        // Синий блок, который НЕЛЬЗЯ сломать (clickable: false)
-        { x: 150, y: 220, type: 'blue',  shape: 'square', face: '🔒', gx: 0, gy: 0,   clickable: false }, 
-        // Красный КВАДРАТ, улетающий вверх
-        { x: 300, y: 180, type: 'red',   shape: 'square', face: '😡', gx: 0, gy: -0.3, clickable: true }, 
-        // Бомба, которую можно взорвать кликом!
-        { x: 300, y: 40,  type: 'bomb',  shape: 'circle', face: '💣', gx: 0, gy: 0.2,  clickable: true }
-    ],
-    // Уровень 2: Конструкция из неломаемых блоков и кликабельных красных
-    [
-        { x: 200, y: 100, type: 'green', shape: 'circle', face: '🙂', gx: 0, gy: 0.3, clickable: false },
-        { x: 200, y: 200, type: 'blue',  shape: 'square', face: '🔷', gx: 0, gy: 0,   clickable: true },
-        // Красный зажат между неломаемыми синими, кликни по нему, чтобы он исчез/взорвался
-        { x: 350, y: 200, type: 'red',   shape: 'square', face: '🟥', gx: 0, gy: 0,   clickable: true },
-        { x: 350, y: 260, type: 'blue',  shape: 'square', face: '🔒', gx: 0, gy: 0,   clickable: false }
-    ]
-];
+// ==========================================
+// ЛОГИКА ИГРЫ "КТО ШПИОН"
+// ==========================================
+const spyWords = ["Школа", "Больница", "Космос", "Ресторан", "Аквапарк", "Кинотеатр", "Поезд", "Пляж"];
+let spyGameData = { totalPlayers: 0, currentPlayer: 0, roles: [], cardFlipped: false };
 
-function initGame() {
-    container.innerHTML = '';
-    objects = [];
-    
-    document.getElementById('info').innerText = `Уровень ${currentLevel + 1}. Некоторые блоки кликабельны, остерегайся замков 🔒!`;
+function startSpyGame() {
+    const countInput = document.getElementById('player-count');
+    let count = parseInt(countInput.value);
+    if (count < 3) count = 3;
+    if (count > 8) count = 8;
 
-    const levelData = worlds[currentLevel];
+    spyGameData.totalPlayers = count;
+    spyGameData.currentPlayer = 0;
+    spyGameData.cardFlipped = false;
+    document.getElementById('spy-card').classList.remove('flipped');
 
-    levelData.forEach((data, index) => {
-        const el = document.createElement('div');
-        // Назначаем классы: цвет (red/blue...) + форма (circle/square)
-        el.className = `ball ${data.type} ${data.shape}`;
-        el.innerText = data.face;
+    // Выбираем случайную локацию и случайного шпиона
+    const randomLocation = spyWords[Math.floor(Math.random() * spyWords.length)];
+    const spyIndex = Math.floor(Math.random() * count);
+
+    // Заполняем массив ролей
+    spyGameData.roles = [];
+    for (let i = 0; i < count; i++) {
+        spyGameData.roles.push(i === spyIndex ? "Ты ШПИОН! 🕵️‍♂️" : `Локация: ${randomLocation}`);
+    }
+
+    document.getElementById('spy-setup').classList.add('hidden');
+    document.getElementById('spy-gameplay').classList.remove('hidden');
+    updateSpyTurn();
+}
+
+function updateSpyTurn() {
+    document.getElementById('player-turn-text').innerText = `Игрок ${spyGameData.currentPlayer + 1}, твоя очередь!`;
+    document.getElementById('card-word').innerText = spyGameData.roles[spyGameData.currentPlayer];
+    document.getElementById('btn-next-player').classList.add('hidden');
+}
+
+function flipCard() {
+    const card = document.getElementById('spy-card');
+    card.classList.toggle('flipped');
+    spyGameData.cardFlipped = !spyGameData.cardFlipped;
+
+    // Кнопка перехода появляется только после того, как игрок посмотрел карту
+    if (spyGameData.cardFlipped) {
+        document.getElementById('btn-next-player').classList.remove('hidden');
+    }
+}
+
+function nextPlayer() {
+    spyGameData.currentPlayer++;
+    document.getElementById('spy-card').classList.remove('flipped');
+    spyGameData.cardFlipped = false;
+
+    if (spyGameData.currentPlayer < spyGameData.totalPlayers) {
+        setTimeout(updateSpyTurn, 300); // небольшая задержка пока карта переворачивается обратно
+    } else {
+        // Все посмотрели свои карты
+        document.getElementById('player-turn-text').innerText = "Все роли распределены! Начинайте обсуждение. Задавайте вопросы друг другу!";
+        document.getElementById('spy-card').style.display = 'none';
+        document.getElementById('btn-next-player').classList.add('hidden');
         
-        // Если блок нельзя кликать, убираем указатель-ручку
-        if (!data.clickable) {
-            el.style.cursor = 'default';
-        }
-        
-        container.appendChild(el);
-
-        const obj = {
-            el: el,
-            type: data.type,
-            shape: data.shape,
-            x: data.x,
-            y: data.y,
-            vx: 0,
-            vy: 0,
-            gx: data.gx,
-            gy: data.gy,
-            size: 50, // Ширина и высота блока
-            radius: 25,
-            isDead: false,
-            clickable: data.clickable
+        // Кнопка возврата к новой раздаче
+        const btnReset = document.createElement('button');
+        btnReset.className = "btn-main";
+        btnReset.innerText = "Раздать заново";
+        btnReset.onclick = () => {
+            document.getElementById('spy-card').style.display = 'flex';
+            document.getElementById('spy-setup').classList.remove('hidden');
+            document.getElementById('spy-gameplay').classList.add('hidden');
+            btnReset.remove();
         };
+        document.getElementById('game-spy').appendChild(btnReset);
+    }
+}
 
-        // Логика клика
-        el.addEventListener('click', () => {
-            if (!obj.clickable || obj.isDead) return;
+// ==========================================
+// ЛОГИКА ИГРЫ "ПРЯТКИ"
+// ==========================================
+let hideCount = 0;
+let hideTimeLeft = 30;
+let hideTimerInterval;
+const targetEmoji = "🎯"; // Что ищем
+const decoEmojis = ["🌳", "📦", "🛋️", "🚗", "🏠", "🎨", "🧱", "💎"]; // Отвлекающие предметы
+
+function startHideGame() {
+    const field = document.getElementById('hide-field');
+    const startBtn = document.getElementById('btn-start-hide');
+    field.innerHTML = '';
+    startBtn.classList.add('hidden');
+    
+    hideCount = 5; // Сколько целей надо найти
+    hideTimeLeft = 25; // Время на уровень
+    document.getElementById('hide-count').innerText = hideCount;
+    document.getElementById('hide-timer').innerText = hideTimeLeft;
+
+    // Спавним отвлекающие декорации
+    for(let i=0; i < 60; i++) {
+        spawnEmoji(decoEmojis[Math.floor(Math.random() * decoEmojis.length)], false);
+    }
+
+    // Спавним наши скрытые цели
+    for(let i=0; i < hideCount; i++) {
+        spawnEmoji(targetEmoji, true);
+    }
+
+    // Запуск таймера
+    clearInterval(hideTimerInterval);
+    hideTimerInterval = setInterval(() => {
+        hideTimeLeft--;
+        document.getElementById('hide-timer').innerText = hideTimeLeft;
+        if (hideTimeLeft <= 0) {
+            clearInterval(hideTimerInterval);
+            alert("Время вышло! 💥 Смайлики спрятались слишком хорошо.");
+            startBtn.classList.remove('hidden');
+            field.innerHTML = '';
+        }
+    }, 1000);
+}
+
+function spawnEmoji(emoji, isTarget) {
+    const field = document.getElementById('hide-field');
+    const span = document.createElement('span');
+    span.className = "hidden-emoji";
+    span.innerText = emoji;
+
+    // Рандомные координаты внутри поля (ширина 440, высота 270 с учетом размеров эмодзи)
+    const x = Math.random() * (field.clientWidth - 30);
+    const y = Math.random() * (field.clientHeight - 30);
+    span.style.left = `${x}px`;
+    span.style.top = `${y}px`;
+
+    // Если это цель, вешаем событие нахождения
+    if (isTarget) {
+        span.onclick = (e) => {
+            e.stopPropagation(); // чтобы клик не улетал дальше
+            span.style.transform = "scale(2)";
+            span.style.opacity = "0";
+            setTimeout(() => span.remove(), 200);
             
-            if (obj.type === 'bomb') {
-                explodeBomb(index); // Взрыв бомбы по клику!
-            } else {
-                removeObject(index); // Обычное удаление кликом (красные, ломаемые синие)
+            hideCount--;
+            document.getElementById('hide-count').innerText = hideCount;
+
+            if (hideCount <= 0) {
+                clearInterval(hideTimerInterval);
+                alert("Ура! Ты нашёл всех скрытых смайликов! 🎉");
+                document.getElementById('btn-start-hide').classList.remove('hidden');
             }
-        });
-
-        objects.push(obj);
-    });
-}
-
-function removeObject(index) {
-    if (objects[index] && !objects[index].isDead) {
-        objects[index].isDead = true;
-        objects[index].el.remove();
-        checkVictoryCondition();
+        };
+    } else {
+        // Декорации слегка меняют прозрачность, чтобы сливаться с полем
+        span.style.opacity = Math.random() * 0.4 + 0.5; 
     }
+
+    field.appendChild(span);
 }
-
-function explodeBomb(bombIndex) {
-    const bomb = objects[bombIndex];
-    if (!bomb || bomb.isDead) return;
-
-    bomb.isDead = true;
-    bomb.el.innerText = '💥';
-    bomb.el.classList.add('exploded');
-
-    // Волна взрыва расталкивает объекты
-    objects.forEach((obj) => {
-        if (!obj || obj.isDead || obj === bomb) return;
-
-        const dx = obj.x - bomb.x;
-        const dy = obj.y - bomb.y;
-        const dist = Math.hypot(dx, dy);
-
-        if (dist < 180) {
-            // Неломаемые синие блоки ('🔒') не сдвигаются взрывом, если у них гравитация 0
-            if (obj.type === 'blue' && obj.gx === 0 && obj.gy === 0) return;
-
-            const force = (180 - dist) * 0.2; 
-            obj.vx += (dx / (dist || 1)) * force;
-            obj.vy += (dy / (dist || 1)) * force;
-        }
-    });
-
-    setTimeout(() => {
-        bomb.el.remove();
-        checkVictoryCondition();
-    }, 300);
-}
-
-function checkVictoryCondition() {
-    const redAlive = objects.some(obj => obj && !obj.isDead && obj.type === 'red');
-    if (!redAlive) {
-        setTimeout(() => {
-            if (currentLevel < worlds.length - 1) {
-                currentLevel++;
-                initGame();
-            } else {
-                alert('💥 Мега-аркада пройдена! Ты супер-инженер! 🏁');
-                currentLevel = 0;
-                initGame();
-            }
-        }, 500);
-    }
-}
-
-function updatePhysics() {
-    objects.forEach((obj, i) => {
-        if (!obj || obj.isDead) return;
-
-        // Физика движения
-        obj.vx += obj.gx;
-        obj.vy += obj.gy;
-        obj.x += obj.vx;
-        obj.y += obj.vy;
-
-        // Невидимый пол для зеленых
-        if (obj.type === 'green') {
-            if (obj.y > 346) { 
-                obj.y = 346;
-                obj.vy = 0;
-                obj.vx *= 0.7; // Сопротивление пола
-            }
-        }
-
-        // Столкновения
-        objects.forEach((other, j) => {
-            if (!other || other.isDead || i === j) return;
-
-            const dx = other.x - obj.x;
-            const dy = other.y - obj.y;
-            const dist = Math.hypot(dx, dy);
-            const minDist = obj.radius + other.radius;
-
-            if (dist < minDist) {
-                const overlap = minDist - dist;
-                const nx = dx / dist;
-                const ny = dy / dist;
-
-                // Статичные синие блоки не двигаются от ударов
-                const isObjStatic = (obj.type === 'blue' && obj.gx === 0 && obj.gy === 0);
-                
-                if (!isObjStatic) {
-                    obj.x -= nx * overlap * 0.5;
-                    obj.y -= ny * overlap * 0.5;
-                    
-                    const kx = obj.vx - other.vx;
-                    const ky = obj.vy - other.vy;
-                    const p = 2 * (nx * kx + ny * ky) / 2;
-                    
-                    obj.vx -= p * nx;
-                    obj.vy -= p * ny;
-                }
-            }
-        });
-
-        // Отрезаем координаты под экран
-        obj.el.style.left = obj.x + 'px';
-        obj.el.style.top = obj.y + 'px';
-
-        // Вылет за границы игрового поля
-        if (obj.y < -60 || obj.y > 420 || obj.x < -60 || obj.x > 620) {
-            if (obj.type === 'red') {
-                removeObject(i); 
-            } else if (obj.type === 'green') {
-                alert('Критическая ошибка! Зеленый объект потерян.');
-                initGame();
-            }
-        }
-    });
-
-    requestAnimationFrame(updatePhysics);
-}
-
-resetBtn.addEventListener('click', initGame);
-initGame();
-updatePhysics();
