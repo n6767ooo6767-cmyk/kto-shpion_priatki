@@ -3,79 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GeoMaster Online — Угадай место на планете</title>
-    
-    <!-- Стили и библиотека синхронизации -->
+    <title>TimeBattle — Поймай миллисекунду</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-    <div class="game-container">
-        <!-- ЛОББИ: ЭКРАН ВХОДА -->
-        <div id="auth-screen" class="view">
-            <div class="logo-zone">
-                <span class="logo-icon">🌍</span>
-                <h1>GeoMaster <span>Online</span></h1>
-                <p>Соревнуйся с друзьями в знании планеты прямо с телефона</p>
+    <div class="app-container">
+        <!-- ЭКРАН 1: ВХОД -->
+        <div id="auth-screen" class="screen-view">
+            <div class="hero-zone">
+                <div class="pulse-circle">⏱️</div>
+                <h1>Time<span>Battle</span></h1>
+                <p>Почувствуй время. Битва на миллисекунды с друзьями на одном экране!</p>
             </div>
 
-            <div class="form-box">
-                <div class="input-field">
-                    <label for="room-input">Код комнаты</label>
-                    <input type="text" id="room-input" placeholder="Например: 7777">
-                </div>
-                
-                <div class="input-field">
-                    <label for="name-input">Твоё имя</label>
-                    <input type="text" id="name-input" placeholder="Как тебя зовут?">
-                </div>
-
-                <div class="action-buttons">
-                    <button class="btn btn-create" onclick="initGame(true)">Создать лобби</button>
-                    <button class="btn btn-join" onclick="initGame(false)">Войти к друзьям</button>
+            <div class="login-form">
+                <input type="text" id="room-input" placeholder="Название вашей компании (например: Бро)">
+                <input type="text" id="name-input" placeholder="Твоё имя">
+                <div class="button-row">
+                    <button class="neon-btn purple" style="width: 100%; flex: none;" onclick="startTimeGame(true)">Начать баттл 🎮</button>
                 </div>
             </div>
         </div>
 
-        <!-- ИГРОВОЙ ЭКРАН -->
-        <div id="game-screen" class="view hidden">
-            <!-- Верхняя панель инфо -->
-            <div class="top-status-bar">
-                <div class="room-badge">🚪 Комната: <span id="display-room">----</span></div>
-                <div id="game-status" class="status-msg">Где это находится? 🤔</div>
+        <!-- ЭКРАН 2: ИГРА -->
+        <div id="game-screen" class="screen-view hidden">
+            <div class="top-nav">
+                <span class="badge">Группа: <b id="room-id">---</b></span>
+                <span id="game-status" class="status-indicator">Ожидание нажатия...</span>
             </div>
 
-            <!-- Изображение секретной локации -->
-            <div class="photo-viewer">
-                <img id="target-image" src="" alt="Загадочное место">
-                <div class="photo-overlay"></div>
+            <div class="target-display">
+                <p>Цель раунда:</p>
+                <div id="target-time">0.00</div>
+                <span>секунд</span>
             </div>
 
-            <p class="instruction">Изучи детали фото и кликни по карте мира внизу:</p>
+            <!-- Главная неоновая кнопка удержания -->
+            <div class="pad-area">
+                <button id="action-pad" 
+                        onmousedown="startHolding()" 
+                        onmouseup="stopHolding()" 
+                        ontouchstart="startHolding(event)" 
+                        ontouchend="stopHolding(event)">
+                    ЗАЖМИ И ДЕРЖИ
+                </button>
+            </div>
 
-            <!-- Интерактивная карта мира -->
-            <div class="map-wrapper">
-                <div id="world-map" onclick="onMapClick(event)">
-                    <!-- Сюда JS будет крепить твою метку -->
-                    <div id="map-pin" class="hidden">📍</div>
+            <!-- Список участников и результаты -->
+            <div class="results-layout">
+                <h3>Участники баттла:</h3>
+                <div id="leaderboard" class="players-list">
+                    <!-- Сюда JS будет рендерить карточки игроков -->
                 </div>
             </div>
 
-            <!-- Список игроков в комнате и их статусы -->
-            <div class="players-section">
-                <h4>Игроки в комнате:</h4>
-                <div id="players-chips" class="chips-container"></div>
-            </div>
-
-            <!-- Управление раундами (только для создателя лобби) -->
-            <div id="host-controls" class="hidden">
-                <button class="btn btn-next" onclick="triggerNextRound()">Следующий раунд 🚀</button>
+            <!-- Кнопка добавления нового игрока (в этой же сессии) -->
+            <div class="button-row" style="margin-top: 10px;">
+                <button class="neon-btn" onclick="location.reload();">➕ Добавить игрока</button>
+                <button id="host-next-btn" class="neon-btn yellow hidden" onclick="nextTimeRound()">Новый раунд 🚀</button>
             </div>
         </div>
     </div>
 
-    <!-- Твой файл логики -->
     <script src="script.js"></script>
 </body>
 </html>
