@@ -1,6 +1,22 @@
-const SUPABASE_URL = "https://cfsvmuewbskyqumhkyah.supabase.co"; 
+// ========================================================
+// КОНФИГУРАЦИЯ SUPABASE
+// ========================================================
+// Когда скопируешь данные из панели Supabase, вставь их сюда:
+const SUPABASE_URL = "https://cfsvmuewbskyqumhkyah.supabase.co";  
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."; 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let db = null;
+try {
+    // Проверяем, что библиотека подключена и ключи изменены
+    if (typeof supabase !== 'undefined' && SUPABASE_URL && !SUPABASE_URL.includes("your-project-id")) {
+        db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        console.log("Supabase успешно подключен! 🔥");
+    } else {
+        console.log("Работаем в ДЕМО-режиме (клиентские ключи не заданы).");
+    }
+} catch(e) {
+    console.error("Ошибка инициализации Supabase, переходим в демо-режим:", e);
+}
 
 // Пул вопросов для викторины
 const questionsPool = [
@@ -17,40 +33,57 @@ let creatorAnswers = [];
 let friendAnswers = [];
 let creatorNameGlobal = "";
 
-// Автоматическая проверка при старте страницы
+// Автоматическая проверка ссылки при старте страницы
 window.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     testId = urlParams.get('testId');
 
     if (testId) {
-        // Режим ДРУГА
-        let { data: test, error } = await supabase.from('friend_tests').select('*').eq('id', testId).single();
-        if (error || !test) {
-            alert("Тест не найден! Создайте свой.");
-            window.location.href = window.location.pathname;
-            return;
+        if (testId.startsWith("demo-")) {
+            // Демо-тест без базы данных
+            creatorNameGlobal = "Друг (Демо)";
+            creatorAnswers = [0, 1, 2, 0, 1]; // Фейковые ответы для проверки
+            document.getElementById('display-creator-name').innerText = creatorNameGlobal;
+            switchScreen('friend-screen');
+        } else if (db) {
+            // Реальный режим друга из Supabase
+            try {
+                let { data: test, error } = await db.from('friend_tests').select('*').eq('id', testId).single();
+                if (!error && test) {
+                    creatorNameGlobal = test.creator_name;
+                    creatorAnswers = test.answers;
+                    document.getElementById('display-creator-name').innerText = creatorNameGlobal;
+                    switchScreen('friend-screen');
+                    return;
+                }
+            } catch(e) { console.error("Ошибка загрузки теста:", e); }
+            switchScreen('create-screen');
+        } else {
+            alert("Этот тест создан в реальной базе данных, но твой скрипт не подключен к Supabase.");
+            switchScreen('create-screen');
         }
-        creatorNameGlobal = test.creator_name;
-        creatorAnswers = test.answers;
-        document.getElementById('display-creator-name').innerText = creatorNameGlobal;
-        switchScreen('friend-screen');
     } else {
-        // Режим СОЗДАТЕЛЯ
         switchScreen('create-screen');
     }
 });
 
 function switchScreen(screenId) {
     document.querySelectorAll('.screen-view').forEach(s => s.classList.add('hidden'));
-    document.getElementById(screenId).classList.remove('hidden');
+    const target = document.getElementById(screenId);
+    if (target) target.classList.remove('hidden');
 }
 
 // ========================================================
 // ЛОГИКА СОЗДАТЕЛЯ ТЕСТА
 // ========================================================
 function startCreatingTest() {
-    creatorNameGlobal = document.getElementById('creator-name-input').value.trim();
-    if (!creatorNameGlobal) return alert("Введите имя!");
+    const nameInput = document.getElementById('creator-name-input');
+    creatorNameGlobal = nameInput ? nameInput.value.trim() : "";
+    
+    if (!creatorNameGlobal) {
+        alert("Пожалуйста, введи своё имя! 😉");
+        return;
+    }
 
     document.getElementById('creator-auth').classList.add('hidden');
     document.getElementById('quiz-builder').classList.remove('hidden');
@@ -82,18 +115,26 @@ function handleBuilderChoice(variantIdx) {
 }
 
 async function saveTestToSupabase() {
-    let { data: newTest, error } = await supabase.from('friend_tests').insert({
-        creator_name: creatorNameGlobal,
-        answers: creatorAnswers
-    }).select().single();
+    let generatedId = "demo-" + Math.floor(Math.random() * 100000);
+    
+    if (db) {
+        try {
+            let { data: newTest, error } = await db.from('friend_tests').insert({
+                creator_name: creatorNameGlobal,
+                answers: creatorAnswers
+            }).select().single();
 
-    if (error) return alert("Ошибка при создании теста.");
+            if (!error && newTest) {
+                generatedId = newTest.id;
+            }
+        } catch(e) { console.error("Ошибка сохранения:", e); }
+    }
 
-    const shareLink = `${window.location.origin}${window.location.pathname}?testId=${newTest.id}`;
+    const shareLink = `${window.location.origin}${window.location.pathname}?testId=${generatedId}`;
     document.getElementById('share-link-input').value = shareLink;
     
     switchScreen('share-screen');
-    renderLeaderboard(newTest.leaderboard);
+    renderLeaderboard([]);
 }
 
 // ========================================================
@@ -138,24 +179,24 @@ async function finishFriendQuiz() {
         if (creatorAnswers[i] === friendAnswers[i]) correctCount++;
     }
     
-    // Считаем проценты угадывания
-    const percent = Math.round((correctCount / creatorAnswers.length) * 100);
+    const percent = Math.round((correctCount / questionsPool.length) * 100);
     const fName = document.getElementById('friend-name-input').value.trim();
 
-    // Загружаем текущий лидерборд, добавляем себя и пушим обратно
-    let { data: test } = await supabase.from('friend_tests').select('leaderboard').eq('id', testId).single();
-    let currentLeaderboard = test.leaderboard || [];
-    currentLeaderboard.push({ name: fName, percent: percent });
-    
-    await supabase.from('friend_tests').update({ leaderboard: currentLeaderboard }).eq('id', testId);
+    if (db && testId && !testId.startsWith("demo-")) {
+        try {
+            let { data: test } = await db.from('friend_tests').select('leaderboard').eq('id', testId).single();
+            let currentLeaderboard = test.leaderboard || [];
+            currentLeaderboard.push({ name: fName, percent: percent });
+            await db.from('friend_tests').update({ leaderboard: currentLeaderboard }).eq('id', testId);
+        } catch(e) { console.error("Ошибка сохранения результатов друга:", e); }
+    }
 
-    // Показываем финальный экран
     document.getElementById('result-title').innerText = `Результат игры`;
     document.getElementById('result-percent-text').innerText = `Ты знаешь ${creatorNameGlobal} на ${percent}%!`;
     switchScreen('result-screen');
 }
 
-// Полезные утилиты
+// Утилиты
 function copyLink() {
     const input = document.getElementById('share-link-input');
     input.select();
@@ -165,9 +206,10 @@ function copyLink() {
 
 function renderLeaderboard(list) {
     const box = document.getElementById('share-leaderboard');
+    if (!box) return;
     box.innerHTML = '';
     if(!list || list.length === 0) {
-        box.innerHTML = '<p style="color:#9ca3af; font-size:13px; text-align:center;">Пока никто не прошёл... Будь первым, отправь ссылку!</p>';
+        box.innerHTML = '<p style="color:#a0a0c0; font-size:13px; text-align:center;">Пока никто не прошёл... Будь первым, отправь ссылку!</p>';
         return;
     }
     [...list].sort((a,b)=>b.percent - a.percent).forEach(p => {
