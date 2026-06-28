@@ -3,124 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WePlay Web Edition</title>
-    <link rel="stylesheet" href="style.css">
+    <title>GeoMaster Online — Угадай место на планете</title>
     
-    <!-- Подключаем официальную библиотеку Supabase для Realtime-синхронизации -->
+    <!-- Стили и библиотека синхронизации -->
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-    <!-- ЭКРАН 1: ГЛАВНОЕ МЕНЮ WEPLAY -->
-    <div id="main-menu" class="screen">
-        <h1 class="logo">WePlay <span>Web</span></h1>
-        <p class="subtitle">Каждый играет со своего телефона!</p>
-        
-        <div class="menu-grid">
-            <div class="menu-card spy-card" onclick="switchScreen('game-spy')">
-                <span class="icon">🕵️‍♂️</span>
-                <div>
-                    <h3>Кто шпион?</h3>
-                    <p>Найди того, у кого другое слово</p>
+    <div class="game-container">
+        <!-- ЛОББИ: ЭКРАН ВХОДА -->
+        <div id="auth-screen" class="view">
+            <div class="logo-zone">
+                <span class="logo-icon">🌍</span>
+                <h1>GeoMaster <span>Online</span></h1>
+                <p>Соревнуйся с друзьями в знании планеты прямо с телефона</p>
+            </div>
+
+            <div class="form-box">
+                <div class="input-field">
+                    <label for="room-input">Код комнаты</label>
+                    <input type="text" id="room-input" placeholder="Например: 7777">
+                </div>
+                
+                <div class="input-field">
+                    <label for="name-input">Твоё имя</label>
+                    <input type="text" id="name-input" placeholder="Как тебя зовут?">
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-create" onclick="initGame(true)">Создать лобби</button>
+                    <button class="btn btn-join" onclick="initGame(false)">Войти к друзьям</button>
                 </div>
             </div>
-            <div class="menu-card hide-card" onclick="switchScreen('game-hide')">
-                <span class="icon">🙈</span>
-                <div>
-                    <h3>Онлайн Прятки</h3>
-                    <p>Превращайся в предметы и прячься на карте</p>
+        </div>
+
+        <!-- ИГРОВОЙ ЭКРАН -->
+        <div id="game-screen" class="view hidden">
+            <!-- Верхняя панель инфо -->
+            <div class="top-status-bar">
+                <div class="room-badge">🚪 Комната: <span id="display-room">----</span></div>
+                <div id="game-status" class="status-msg">Где это находится? 🤔</div>
+            </div>
+
+            <!-- Изображение секретной локации -->
+            <div class="photo-viewer">
+                <img id="target-image" src="" alt="Загадочное место">
+                <div class="photo-overlay"></div>
+            </div>
+
+            <p class="instruction">Изучи детали фото и кликни по карте мира внизу:</p>
+
+            <!-- Интерактивная карта мира -->
+            <div class="map-wrapper">
+                <div id="world-map" onclick="onMapClick(event)">
+                    <!-- Сюда JS будет крепить твою метку -->
+                    <div id="map-pin" class="hidden">📍</div>
                 </div>
+            </div>
+
+            <!-- Список игроков в комнате и их статусы -->
+            <div class="players-section">
+                <h4>Игроки в комнате:</h4>
+                <div id="players-chips" class="chips-container"></div>
+            </div>
+
+            <!-- Управление раундами (только для создателя лобби) -->
+            <div id="host-controls" class="hidden">
+                <button class="btn btn-next" onclick="triggerNextRound()">Следующий раунд 🚀</button>
             </div>
         </div>
     </div>
 
-    <!-- ЭКРАН 2: ИГРА "КТО ШПИОН" -->
-    <div id="game-spy" class="screen hidden">
-        <button class="btn-back" onclick="switchScreen('main-menu')">← Меню</button>
-        <h2>🕵️‍♂️ Кто шпион?</h2>
-        
-        <!-- Авторизация и создание/вход в комнату -->
-        <div id="spy-auth">
-            <div class="input-group">
-                <input type="text" id="spy-room-input" placeholder="Код комнаты (например, 1234)">
-                <input type="text" id="spy-name-input" placeholder="Твоё имя">
-            </div>
-            <div class="btn-group">
-                <button class="btn-main create-btn" onclick="startSpyLobby(true)">Создать</button>
-                <button class="btn-main" onclick="startSpyLobby(false)">Войти</button>
-            </div>
-        </div>
-
-        <!-- Игровой процесс изнутри комнаты -->
-        <div id="spy-gameplay" class="hidden">
-            <div class="game-bar">
-                <div id="spy-room-display">Комната: ----</div>
-                <div id="spy-status">Ожидание игроков...</div>
-            </div>
-
-            <!-- Список подключившихся ребят -->
-            <ul id="spy-players-list"></ul>
-
-            <!-- 3D Карточка со словом (откроется, когда хост раздаст роли) -->
-            <div id="spy-card-zone" class="hidden">
-                <p id="player-turn-text">Нажми на карту, чтобы узнать своё слово:</p>
-                <div class="card-container">
-                    <div class="card" id="spy-card" onclick="flipCard()">
-                        <div class="card-front">Посмотреть секретное слово</div>
-                        <div class="card-back" id="card-word">Ожидание...</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Кнопка старта (видна только создателю комнаты) -->
-            <button class="btn-main hidden" id="btn-start-spy" onclick="distributeRoles()">Раздать карточки 🃏</button>
-        </div>
-    </div>
-
-    <!-- ЭКРАН 3: ОНЛАЙН ПРЯТКИ -->
-    <div id="game-hide" class="screen hidden">
-        <button class="btn-back" onclick="switchScreen('main-menu')">← Меню</button>
-        <h2>🙈 Онлайн Прятки</h2>
-        
-        <!-- Авторизация и создание/вход в комнату -->
-        <div id="hide-auth">
-            <div class="input-group">
-                <input type="text" id="hide-room-input" placeholder="Код комнаты">
-                <input type="text" id="hide-name-input" placeholder="Твоё имя">
-            </div>
-            <div class="btn-group">
-                <button class="btn-main create-btn" onclick="startHideLobby(true)">Создать</button>
-                <button class="btn-main" onclick="startHideLobby(false)">Войти</button>
-            </div>
-        </div>
-
-        <!-- Игровое поле пряток -->
-        <div id="hide-gameplay" class="hidden">
-            <div class="game-bar">
-                <div id="hide-status">Стадия: Ожидание...</div>
-                <div id="hide-room-display">Комната: ----</div>
-            </div>
-
-            <!-- Интерактивная 2D карта-комната -->
-            <div id="map-canvas" onclick="handleMapClick(event)"></div>
-
-            <!-- Селектор предметов маскировки (только для прячущихся игроков) -->
-            <div id="disguise-panel" class="hidden">
-                <p>Выбери, в какой предмет превратиться:</p>
-                <div class="disguise-options">
-                    <button onclick="selectDisguise('📦')">📦 Коробка</button>
-                    <button onclick="selectDisguise('🪑')">🪑 Стул</button>
-                    <button onclick="selectDisguise('🛋️')">🛋️ Диван</button>
-                    <button onclick="selectDisguise('🪴')">🪴 Цветок</button>
-                </div>
-            </div>
-
-            <!-- Кнопка запуска поиска (видна только создателю-Искателю) -->
-            <button class="btn-main hidden" id="btn-start-seeking" onclick="changeGameState('seeking')">Все сели! Начать искать 🕵️‍♂️</button>
-        </div>
-    </div>
-
-    <!-- Подключаем логику игры -->
+    <!-- Твой файл логики -->
     <script src="script.js"></script>
 </body>
 </html>
