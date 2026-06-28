@@ -1,4 +1,25 @@
 /* --- СУПЕР-МЕГА-СТИЛЬ С КИБЕР-АНИМАЦИЕЙ --- */
+/* Плавное появление всех элементов */
+.screen-view {
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Анимация нажатия кнопки */
+.btn-variant:active {
+    transform: scale(0.97);
+    background: rgba(0, 242, 255, 0.2);
+}
+
+/* Эффект "магического" свечения для заголовков */
+h1, h2 {
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+}
+
 :root {
     --bg-main: #05050a;
     --card-bg: rgba(20, 16, 43, 0.65);
