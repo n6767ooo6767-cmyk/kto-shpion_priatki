@@ -1,102 +1,18 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BFF Test — Проверь своего друга</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="stylesheet" href="style.css?v=5">
+    <title>Моя игра</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="app-container">
-        
-        <!-- ЭКРАН 1: СОЗДАНИЕ ТЕСТА -->
-        <div id="create-screen" class="screen-view">
-            <div class="hero-zone">
-                <div class="pulse-circle">🧠</div>
-                <h1>BFF<span>Test</span></h1>
-                <p>Создай тест о себе и проверь, насколько хорошо тебя знают друзья!</p>
-            </div>
-            
-            <div id="creator-auth">
-                <div class="login-form">
-                    <input type="text" id="creator-name-input" placeholder="Твоё имя">
-                    <button class="neon-btn purple" onclick="startCreatingTest()">Создать тест 🚀</button>
-                </div>
-            </div>
+<div id="player"></div>
+<div id="dialog">
+    <p id="dialogText"></p>
+</div>
 
-            <div id="quiz-builder" class="hidden">
-                <div class="top-nav">
-                    <span class="badge" id="question-number">Вопрос 1/5</span>
-                </div>
-                <div class="target-display">
-                    <div id="builder-question-text" style="font-size: 18px; font-weight: bold;">Тут вопрос?</div>
-                </div>
-                <div class="variants-grid" id="builder-variants">
-                    <!-- Варианты сгенерирует JS -->
-                </div>
-            </div>
-        </div>
+<script src="script.js"></script>
 
-        <!-- ЭКРАН 2: ССЫЛКА ГОТОВА -->
-        <div id="share-screen" class="screen-view hidden">
-            <div class="hero-zone">
-                <div class="pulse-circle">🔗</div>
-                <h2>Тест <span>готов!</span></h2>
-                <p>Скопируй ссылку ниже и отправь её друзьям в Telegram или WhatsApp:</p>
-            </div>
-            <div class="login-form">
-                <input type="text" id="share-link-input" readonly onclick="this.select()">
-                <button class="neon-btn purple" onclick="copyLink()">Скопировать ссылку 📋</button>
-            </div>
-            <div class="results-layout" style="margin-top: 30px;">
-                <h3>Кто уже прошёл:</h3>
-                <div id="share-leaderboard" class="players-list"></div>
-            </div>
-        </div>
-
-        <!-- ЭКРАН 3: ДРУГ ПРОХОДИТ ТЕСТ -->
-        <div id="friend-screen" class="screen-view hidden">
-            <div class="hero-zone">
-                <div class="pulse-circle">👀</div>
-                <h2>Угадай <span>секреты</span></h2>
-                <p>Ты проходишь тест, который создал: <b id="display-creator-name" style="color:var(--neon-cyan)">---</b></p>
-            </div>
-
-            <div id="friend-auth">
-                <div class="login-form">
-                    <input type="text" id="friend-name-input" placeholder="Твоё имя">
-                    <button class="neon-btn pink" onclick="startFriendQuiz()">Начать угадывать 🎮</button>
-                </div>
-            </div>
-
-            <div id="friend-quiz" class="hidden">
-                <div class="top-nav">
-                    <span class="badge" id="friend-q-number">Вопрос 1/5</span>
-                </div>
-                <div class="target-display">
-                    <div id="friend-question-text" style="font-size: 18px; font-weight: bold;">Вопрос?</div>
-                </div>
-                <div class="variants-grid" id="friend-variants">
-                    <!-- Варианты -->
-                </div>
-            </div>
-        </div>
-
-        <!-- ЭКРАН 4: ФИНАЛ ДЛЯ ДРУГА -->
-        <div id="result-screen" class="screen-view hidden">
-            <div class="hero-zone">
-                <div class="pulse-circle">🎉</div>
-                <h2 id="result-title">Результат</h2>
-                <p id="result-percent-text" style="font-size: 22px; font-weight: 800; color: var(--neon-yellow); margin: 20px 0;"></p>
-            </div>
-            <button class="neon-btn purple" onclick="window.location.href = window.location.pathname">Создать свой тест 🧠</button>
-        </div>
-
-    </div>
-
-    <script src="script.js"></script>
 </body>
 </html>
